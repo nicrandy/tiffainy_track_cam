@@ -1,7 +1,6 @@
-#Use the 'a' key to rotate left, 's' to rotate right, 'q' to exit program
-#adjust speed variable to go faster or slower
-
-
+####################
+# This code is used to test the servos and also to control the servos
+# Use the 'a' key to rotate left, 's' to rotate right...., 'q' to exit program
 
 from pyfirmata import Arduino, util, SERVO
 import time
@@ -10,61 +9,76 @@ import keyboard
 ######## change testing to true during testing, false for implementation
 testing = True
 
+#Set the board below to the correct port (located in device manager)
 board = Arduino('COM4')
 time.sleep(1)
-print("On")
+
 #set the correct pins for servos
 pinYaw = 5
 pinPitch = 9
 speed = .015 # increase to go slower, decrease to go faster
 
 #set the home angle for servos
-yawHomeAngle = 64
-pitchHomeAngle = 120
+yawHomeAngle = 90
+pitchHomeAngle = 90
 pitchAngle = pitchHomeAngle
 yawAngle = yawHomeAngle
 
-#set the min and max rotation area
-yawMax = 130
-yawMin = 0
-pitchMax = 145
-pitchMin = 80
+#adjust the angle for each movement (how many degrees to move each time)
+# must be a whole number (1 is slow, 3 is fast)
+pitchMovement = 1
+yawMovement = 3
 
+#set the min and max rotation area
+yawMax = 180
+yawMin = 0
+pitchMax = 180
+pitchMin = 0
+
+#this part sets the servos to the home position
 board.digital[pinYaw].mode = SERVO
 board.digital[pinYaw].write(yawHomeAngle)
 time.sleep(.5)
 board.digital[pinPitch].mode = SERVO
 board.digital[pinPitch].write(pitchHomeAngle)
-print("Tracker cam running")
+print("Tracker running")
 time.sleep(2)
 
 
-def up(angle):
-	if angle > pitchMax:
-		angle = pitchMax
-	print("Move Pitch to angle: ",angle)
-	board.digital[pinPitch].write(angle)
+def up():
+	global pitchAngle
+	pitchAngle += pitchMovement
+	if pitchAngle > pitchMax:
+		pitchAngle = pitchMax
+	print("Move Pitch up to angle: ",pitchAngle)
+	board.digital[pinPitch].write(pitchAngle)
 	time.sleep(speed)
 
-def down(angle):
-	if angle < pitchMin:
-		angle = pitchMin
-	print("Move Pitch to angle: ",angle)
-	board.digital[pinPitch].write(angle)
+def down():
+	global pitchAngle
+	pitchAngle -= pitchMovement
+	if pitchAngle < pitchMin:
+		pitchAngle = pitchMin
+	print("Move Pitch down to angle: ",pitchAngle)
+	board.digital[pinPitch].write(pitchAngle)
 	time.sleep(speed)
 
-def left(angle):
-	if angle > yawMax:
-		angle = yawMax
-	print("Move Yaw to angle: ", angle)
-	board.digital[pinYaw].write(angle)
+def left():
+	global yawAngle
+	yawAngle += yawMovement
+	if yawAngle > yawMax:
+		yawAngle = yawMax
+	print("Move Yaw left to angle: ", yawAngle)
+	board.digital[pinYaw].write(yawAngle)
 	time.sleep(speed)
 
-def right(angle):
-	if angle < yawMin:
-		angle = yawMin
-	print("Move Yaw to angle: ", angle)
-	board.digital[pinYaw].write(angle)
+def right():
+	global yawAngle
+	yawAngle -= yawMovement
+	if yawAngle < yawMin:
+		yawAngle = yawMin
+	print("Move Yaw right to angle: ", yawAngle)
+	board.digital[pinYaw].write(yawAngle)
 	time.sleep(speed)
 
 
@@ -74,17 +88,13 @@ while testing:
 		board.exit()
 		break
 	if keyboard.is_pressed("a"):
-		pitchAngle+=1
-		left(pitchAngle)
+		left()
 	if keyboard.is_pressed("d"):
-		pitchAngle-=1
-		right(pitchAngle)
+		right()
 	if keyboard.is_pressed("w"):
-		yawAngle+=1
-		up(yawAngle)
+		up()
 	if keyboard.is_pressed("s"):
-		yawAngle-=1
-		down(yawAngle)
+		down()
 
 
 
