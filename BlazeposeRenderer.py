@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-# import tracker
+import tracker_servo as  tracker
 # import open3d as o3d
 # from o3d_utils import create_segment, create_grid
 
@@ -75,12 +75,24 @@ class BlazeposeRenderer:
             # lines = [np.array([body.landmarks_padded[point,:2] for point in line]) for line in list_connections]
             cv2.polylines(self.frame, lines, False, (255, 180, 90), 2, cv2.LINE_AA)
             
-            # for i,x_y in enumerate(body.landmarks_padded[:,:2]):
-            
+############our code for tracker cam#####################
             #get the far left and far right X position output of the landmarks
             xMin = 1000000
             xMax = -100000
+            yMin = 1000000
+            yMax = -100000
             for i,x_y in enumerate(body.landmarks[:self.pose.nb_kps,:2]):
+                x = x_y[0]
+                y = x_y[1]
+                if x > xMax:
+                    xMax = x 
+                if x < xMin:
+                    xMin = x 
+                if y > yMax:
+                    yMax = y
+                if y < yMin:
+                    yMin = y
+# this colors the circles for the rendered lines (not part of tracking cam)
                 if i > 10:
                     color = (0,255,0) if i%2==0 else (0,0,255)
                 elif i == 0:
@@ -91,7 +103,31 @@ class BlazeposeRenderer:
                     color = (0,0,255)
                 cv2.circle(self.frame, (x_y[0], x_y[1]), 4, color, -11)
 
+############our code for tracker cam#####################
+            xMiddle = ((xMax-xMin)/2)+xMin
+            yMiddle = ((yMax-yMin)/2)+yMin
+            frameXmiddle = int(self.frame.shape[1]/2)
+            frameYmiddle = int(self.frame.shape[0]/2)
+            #draw a circle in the middle of the frame
+            cv2.circle(self.frame, (int(frameXmiddle),int(frameYmiddle)), 35, (220,80,149), -1)
+            #draw a circle in the middle of our target we want to track
+            cv2.circle(self.frame, (int(xMiddle),int(yMiddle)), 20, (100,150,200), -1)
 
+            #set the threshold on the movement bounding box
+            #adjust the values (based on with of input frame)
+            left_wall = .45 * self.frame.shape[1]
+            right_wall = .55 *self.frame.shape[1]
+            ceiling = .65 * self.frame.shape[0]
+            ground = .55 * self.frame.shape[0] 
+
+            if xMiddle < left_wall:
+                tracker.left()
+            if xMiddle > right_wall:
+                tracker.right()
+            if yMiddle > ceiling:
+                tracker.down()
+            if yMiddle < ground:
+                tracker.up()
 
 
     def draw(self, frame, body):
@@ -109,21 +145,5 @@ class BlazeposeRenderer:
             self.output.release()
 
     def waitKey(self, delay=1):
-        # if self.show_fps:
-        #         self.pose.fps.draw(self.frame, orig=(50,50), size=1, color=(240,180,100))
-        # # cv2.imshow("Blazepose", self.frame)
-        # if self.output:
-        #     self.output.write(self.frame)
         key = cv2.waitKey(delay) 
-        # if key == 32:
-        #     # Pause on space bar
-        #     cv2.waitKey(0)
-        # elif key == ord('r'):
-        #     self.show_rot_rect = not self.show_rot_rect
-        # elif key == ord('l'):
-        #     self.show_landmarks = not self.show_landmarks
-        # elif key == ord('s'):
-        #     self.show_score = not self.show_score
-        # elif key == ord('f'):
-        #     self.show_fps = not self.show_fps
         return key
