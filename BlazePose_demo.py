@@ -1,16 +1,10 @@
-#!/usr/bin/env python3
-
 from BlazeposeRenderer import BlazeposeRenderer
 import argparse
 import cv2
-from sklearn import svm
-import pickle
 import time
 import os
-from random import sample
 import array
 import numpy as np
-import servo_tracker as tracker
 import tkinter as tk
 
 #to get screen size later
@@ -94,95 +88,39 @@ def draw_lines_blank_canvas(body,blank_image):
     return blank_image
 
 
-
-currentCamAngle = 90
-def rotate_cam(landmarks):
-    global currentCamAngle
-    xMin = 1000
-    xMax = -1000
-    for landmark in landmarks:
-        x,y,z = landmark
-        if x > xMax:
-            xMax = x 
-        if x < xMin:
-            xMin = x 
-    print ("xmin: ", xMin, "   xmax: ",xMax, "   middle: ",(((xMax-xMin)/2)+xMin))
-    #Set area to rotate camera if person is outside area
-    person_middle = ((xMax-xMin)/2)+xMin
-    left_wall = .49
-    right_wall = .51
-    print("Person l r and m: ",left_wall,person_middle,right_wall)
-
-    if person_middle < left_wall:
-        if currentCamAngle < 5:
-            currentCamAngle= 5
-        # if person_middle < int(frame.shape[1] *.5):
-        currentCamAngle -= 1
-        tracker.rotateYaw(currentCamAngle)            
-    if person_middle > right_wall:
-        if currentCamAngle > 175:
-            currentCamAngle = 175
-    # if person_middle > int(frame.shape[1] *.5):
-        currentCamAngle += 1
-        tracker.rotateYaw(currentCamAngle)
-    print("from demo current cam angle:", currentCamAngle)
-    # return frame
-#to record video
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))
-
 while True:
     # Run blazepose on next frame
     landmarks = np.array([])
     frame0, body, landmarks = pose.next_frame()
 
     just_cam = frame0
-    just_cam = renderer.draw(just_cam,body)
-    #to record cam frame to video file
-    hsv = cv2.cvtColor(just_cam, cv2.COLOR_BGR2HSV)
-    hsv = cv2.resize(hsv,(640,480),interpolation = cv2.INTER_AREA)
 
-    cv2.imshow("HSV",hsv)
-    out.write(hsv)
+    #this sends the image and landmarks to the BlazePoseRender file where our camera movement code is
+    just_cam = renderer.draw(just_cam,body)
+
     NoneType = type(None)
-    if type(landmarks) != NoneType:
-        print("Landmarks: ",landmarks)
-        print("just cam shape[1]: ",just_cam.shape[1])
-        # rotate_cam(landmarks)# send landmarks and image to tracker to move camera, return image 
+
 
     #create blank canvas(can adjust colors) same size as user's screen size
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
-    # print("Screen size: ", screen_width,screen_height)
     bg_canvas = np.zeros((screen_height,screen_width,3), np.uint8)
-    # print("bg_canvas shape",bg_canvas.shape)
-
-    # #paste example image on bg_canvas
-    # img = cv2.imread(current_pose_list[current_pose])   
-    # ratio = img.shape[0]/img.shape[1] #adjust example size
-    # example_width = 200
-    # example_height = int((200 * ratio))
-    # img2 = cv2.resize(img,(example_width,example_height),interpolation = cv2.INTER_AREA)
-    # bg_canvas[0:img2.shape[0],int(screen_width/2):int(screen_width/2)+img2.shape[1]] = img2
 
     #resize cam image
     cam_ratio = just_cam.shape[0]/just_cam.shape[1]
     cam_width = bg_canvas.shape[1]/2
     cam_height = cam_width*cam_ratio
-    # print("cam ration:",cam_ratio)
     cam_dim = (int(cam_width),int(cam_height))
     just_cam = cv2.resize(just_cam,cam_dim,interpolation = cv2.INTER_AREA)
     just_cam_flipped = cv2.flip(just_cam,1)
     just_cam_joined = cv2.hconcat([just_cam,just_cam_flipped])
     blank_bottom = np.zeros((just_cam_joined.shape[0],just_cam_joined.shape[1],3), np.uint8)
     full_layout = cv2.vconcat([just_cam_joined,blank_bottom])
-    cv2.imshow("blank canvas", full_layout)
 
     bg_canvas[0:just_cam_joined.shape[0],0:just_cam_joined.shape[1]] = just_cam_joined #paste cam output on bg_canvas
 
     if frame0 is None: break
     
-    # print("current pose number : ", desired_pose)
     NoneType = type(None)
     bg_canvas = np.zeros((int(cam_height),int(cam_height),3), np.uint8)
     if type(landmarks) != NoneType:
@@ -201,19 +139,7 @@ while True:
         #     bg_canvas = cv2.line(bg_canvas,positions[line[0]],positions[line[1]],(0, 255, 0),8)
 
     cv2.imshow("Yoga demo",full_layout)
-
-
-############################# end new stuff ########################
-
-
-
-
-    # key = renderer.waitKey(delay=1)
     # Wait for 'q' key to stop the program 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-out.release()#close video recording
-
-# renderer.exit()
-# pose.exit()
 cv2.destroyAllWindows()
