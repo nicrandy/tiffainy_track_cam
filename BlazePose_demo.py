@@ -2,6 +2,7 @@ from BlazeposeRenderer import BlazeposeRenderer
 import argparse
 import cv2
 import time
+from datetime import datetime
 import os
 import array
 import numpy as np
@@ -87,6 +88,13 @@ def draw_lines_blank_canvas(body,blank_image):
     cv2.polylines(blank_image, lines, False, (255, 180, 90), 2, cv2.LINE_AA)
     return blank_image
 
+# Define the codec and create VideoWriter object
+# Get the current time of recording start to save unique file
+dateTimeObj = datetime.now()
+timestampStr = dateTimeObj.strftime("%b_%d_%Y_%H_%M_%S")
+videoName = 'trackCam_' + timestampStr + '.avi'
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+out = cv2.VideoWriter(videoName, fourcc, 15.0, (1536, 864))
 
 while True:
     # Run blazepose on next frame
@@ -104,6 +112,7 @@ while True:
     #create blank canvas(can adjust colors) same size as user's screen size
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
+    print("screen size: ", screen_width,screen_height)
     bg_canvas = np.zeros((screen_height,screen_width,3), np.uint8)
 
     #resize cam image
@@ -113,6 +122,7 @@ while True:
     cam_dim = (int(cam_width),int(cam_height))
     just_cam = cv2.resize(just_cam,cam_dim,interpolation = cv2.INTER_AREA)
     just_cam_flipped = cv2.flip(just_cam,1)
+    just_cam_flipped = cv2.cvtColor(just_cam_flipped, cv2.COLOR_BGR2HSV)
     just_cam_joined = cv2.hconcat([just_cam,just_cam_flipped])
     blank_bottom = np.zeros((just_cam_joined.shape[0],just_cam_joined.shape[1],3), np.uint8)
     full_layout = cv2.vconcat([just_cam_joined,blank_bottom])
@@ -137,9 +147,12 @@ while True:
 
         # for line in LINES_BODY:
         #     bg_canvas = cv2.line(bg_canvas,positions[line[0]],positions[line[1]],(0, 255, 0),8)
-
+    out.write(full_layout)
     cv2.imshow("Yoga demo",full_layout)
     # Wait for 'q' key to stop the program 
     if cv2.waitKey(1) & 0xFF == ord('q'):
+        # After we release our webcam, we also release the output
+        out.release() 
         break
+
 cv2.destroyAllWindows()

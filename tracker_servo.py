@@ -7,7 +7,7 @@ import time
 import keyboard
 
 ######## change testing to true during testing, false for implementation
-testing = True
+testing = False
 
 #Set the board below to the correct port (located in device manager)
 board = Arduino('COM4')
@@ -16,7 +16,7 @@ time.sleep(1)
 #set the correct pins for servos
 pinYaw = 5
 pinPitch = 9
-speed = .015 # increase to go slower, decrease to go faster
+speed = .025 # increase to go slower, decrease to go faster
 
 #set the home angle for servos
 yawHomeAngle = 90
@@ -27,13 +27,13 @@ yawAngle = yawHomeAngle
 #adjust the angle for each movement (how many degrees to move each time)
 # must be a whole number (1 is slow, 3 is fast)
 pitchMovement = 1
-yawMovement = 3
+yawMovement = 2
 
 #set the min and max rotation area
-yawMax = 180
-yawMin = 0
-pitchMax = 180
-pitchMin = 0
+yawMax = 170
+yawMin = 10
+pitchMax = 140
+pitchMin = 60
 
 #this part sets the servos to the home position
 board.digital[pinYaw].mode = SERVO
