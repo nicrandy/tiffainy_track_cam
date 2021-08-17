@@ -1,8 +1,6 @@
 import cv2
 import numpy as np
 import tracker_servo as  tracker
-# import open3d as o3d
-# from o3d_utils import create_segment, create_grid
 
 # LINES_BODY is used when drawing the skeleton onto the source image. 
 # Each variable is a list of continuous lines.
@@ -14,22 +12,6 @@ LINES_BODY = [[28,30,32,28,26,24,12,11,23,25,27,29,31,27],
                 [8,6,5,4,0,1,2,3,7],
                 [10,9],
                 ]
-
-# LINE_MESH_BODY and COLORS_BODY are used when drawing the skeleton in 3D. 
-rgb = {"right":(0,1,0), "left":(1,0,0), "middle":(1,1,0)}
-LINE_MESH_BODY = [[9,10],[4,6],[1,3],
-                    [12,14],[14,16],[16,20],[20,18],[18,16],
-                    [12,11],[11,23],[23,24],[24,12],
-                    [11,13],[13,15],[15,19],[19,17],[17,15],
-                    [24,26],[26,28],[32,30],
-                    [23,25],[25,27],[29,31]]
-
-COLORS_BODY = ["middle","right","left",
-                    "right","right","right","right","right",
-                    "middle","middle","middle","middle",
-                    "left","left","left","left","left",
-                    "right","right","right","left","left","left"]
-COLORS_BODY = [rgb[x] for x in COLORS_BODY]
 
 class BlazeposeRenderer:
     def __init__(self,
@@ -117,17 +99,34 @@ class BlazeposeRenderer:
             #adjust the values (based on with of input frame)
             left_wall = .45 * self.frame.shape[1]
             right_wall = .55 *self.frame.shape[1]
-            ceiling = .65 * self.frame.shape[0]
-            ground = .55 * self.frame.shape[0] 
+            ceiling = .5 * self.frame.shape[0] #values measured from TOP of image
+            ground = .6 * self.frame.shape[0] 
 
+            #get distance from tracking object to center of frame. Adjust movement angle of servo the further the object is from center of frame
+            targetDistance = abs(xMiddle - (self.frame.shape[1]/2))
+            yawMovementSpeed = 0
+            if targetDistance > self.frame.shape[1] * .05:
+                yawMovementSpeed = 1
+            if targetDistance > self.frame.shape[1] * .2:
+                yawMovementSpeed = 2
+            if targetDistance > self.frame.shape[1] * .4:
+                yawMovementSpeed = 3
+            tracker.set_yaw_speed(yawMovementSpeed)
+
+            currentlyMoving = 'X'
             if xMiddle < left_wall:
                 tracker.left()
+                currentlyMoving = '<--'
             if xMiddle > right_wall:
                 tracker.right()
+                currentlyMoving = '-->'
             if yMiddle > ceiling:
                 tracker.down()
             if yMiddle < ground:
                 tracker.up()
+            cv2.putText(self.frame, 'Track speed: ' + str(yawMovementSpeed) + ' direction: ' + currentlyMoving,(20,50), 
+                cv2.FONT_HERSHEY_SIMPLEX, 2,(50,100,255),2,cv2.LINE_AA)
+
 
 
     def draw(self, frame, body):
@@ -135,9 +134,14 @@ class BlazeposeRenderer:
         if body:
             self.draw_landmarks(body)
             self.body = body
-        elif self.frame is None:
+        else:
+############ our tracker cam code
+            # tracker cam will scan if no target object detected
+            tracker.scan() 
+        if self.frame is None:
             self.frame = frame
             self.body = None
+
         return self.frame
     
     def exit(self):

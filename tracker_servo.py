@@ -1,6 +1,6 @@
 ####################
 # This code is used to test the servos and also to control the servos
-# Use the 'a' key to rotate left, 's' to rotate right...., 'q' to exit program
+# Use the 'a' key to rotate left, 'd' to rotate right...., 'q' to exit program
 
 from pyfirmata import Arduino, util, SERVO
 import time
@@ -16,7 +16,7 @@ time.sleep(1)
 #set the correct pins for servos
 pinYaw = 5
 pinPitch = 9
-speed = .025 # increase to go slower, decrease to go faster
+speed = .08 # increase to go slower, decrease to go faster
 
 #set the home angle for servos
 yawHomeAngle = 90
@@ -27,7 +27,7 @@ yawAngle = yawHomeAngle
 #adjust the angle for each movement (how many degrees to move each time)
 # must be a whole number (1 is slow, 3 is fast)
 pitchMovement = 1
-yawMovement = 2
+yawMovement = 1
 
 #set the min and max rotation area
 yawMax = 170
@@ -43,6 +43,44 @@ board.digital[pinPitch].mode = SERVO
 board.digital[pinPitch].write(pitchHomeAngle)
 print("Tracker running")
 time.sleep(2)
+
+def wakeup_dance():
+	i = 10
+	while i > 0:
+		left()
+		i -= 1
+	i = 10
+	while i > 0:
+		down()
+		i -= 1
+	i = 10
+	while i > 0:
+		right()
+		i -= 1
+	i = 10
+	while i > 0:
+		up()
+		i -= 1
+	i = 10
+	while i > 0:
+		right()
+		i -= 1
+	i = 10
+	while i > 0:
+		up()
+		i -= 1
+	i = 10
+	while i > 0:
+		left()
+		i -= 1
+	i = 10
+	while i > 0:
+		down()
+		i -= 1
+
+def set_yaw_speed(angleDegrees):
+	global yawMovement
+	yawMovement = angleDegrees
 
 
 def up():
@@ -81,7 +119,20 @@ def right():
 	board.digital[pinYaw].write(yawAngle)
 	time.sleep(speed)
 
+currentRotation = 'left'
+def scan():
+	global yawAngle
+	global currentRotation
+	if currentRotation == 'left':
+		left()
+	if currentRotation == 'right':
+		right()
+	if yawAngle < yawMin + 5:
+		currentRotation = 'left'
+	if yawAngle > yawMax - 5:
+		currentRotation = 'right'
 
+wakeup_dance()
 
 while testing:
 	if keyboard.is_pressed("q"):
@@ -95,6 +146,8 @@ while testing:
 		up()
 	if keyboard.is_pressed("s"):
 		down()
+	if keyboard.is_pressed("x"):
+		scan()
 
 
 

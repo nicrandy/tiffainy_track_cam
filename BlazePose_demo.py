@@ -11,6 +11,9 @@ import tkinter as tk
 #to get screen size later
 root = tk.Tk()
 
+#change to True if you want to record the video output. Saves to same folder as this file.
+record = False
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', '--edge', action="store_true",
                     help="Use Edge mode (postprocessing runs on the device)")
@@ -67,14 +70,9 @@ renderer = BlazeposeRenderer(
                 show_3d=args.show_3d, 
                 output=args.output)
 
-
-LINES_BODY = [[9,10],[4,6],[1,3],
-                    [12,14],[14,16],[16,20],[20,18],[18,16],
-                    [12,11],[11,23],[23,24],[24,12],
-                    [11,13],[13,15],[15,19],[19,17],[17,15],
-                    [24,26],[26,28],[32,30],
-                    [23,25],[25,27],[29,31]]
 def draw_lines_blank_canvas(body,blank_image):
+    new_size = (blank_image.shape[1]*2,blank_image.shape[0]*2)
+    blank_image = cv2.resize(blank_image,new_size,interpolation = cv2.INTER_AREA)
     LINES_BODY = [[28,30,32,28,26,24,12,11,23,25,27,29,31,27], 
                 [23,24],
                 [22,16,18,20,16,14,12], 
@@ -84,75 +82,55 @@ def draw_lines_blank_canvas(body,blank_image):
                 ]
     list_connections = LINES_BODY
     lines = [np.array([body.landmarks[point,:2] for point in line]) for line in list_connections]
-    print("Demo render lines:", lines)
     cv2.polylines(blank_image, lines, False, (255, 180, 90), 2, cv2.LINE_AA)
+    blank_image = cv2.resize(blank_image,(int(blank_image.shape[1]/2),int(blank_image.shape[0]/2)),interpolation = cv2.INTER_AREA)
     return blank_image
 
-# Define the codec and create VideoWriter object
-# Get the current time of recording start to save unique file
-dateTimeObj = datetime.now()
-timestampStr = dateTimeObj.strftime("%b_%d_%Y_%H_%M_%S")
-videoName = 'trackCam_' + timestampStr + '.avi'
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter(videoName, fourcc, 15.0, (1536, 864))
+if record:
+    dateTimeObj = datetime.now()
+    timestampStr = dateTimeObj.strftime("%b_%d_%Y_%H_%M_%S")
+    videoName = 'trackCam_' + timestampStr + '.avi'
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(videoName, fourcc, 15.0, (1536, 864))
 
 while True:
     # Run blazepose on next frame
     landmarks = np.array([])
     frame0, body, landmarks = pose.next_frame()
-
     just_cam = frame0
-
     #this sends the image and landmarks to the BlazePoseRender file where our camera movement code is
     just_cam = renderer.draw(just_cam,body)
 
-    NoneType = type(None)
-
-
-    #create blank canvas(can adjust colors) same size as user's screen size
+    if frame0 is None: break
+    #get screen size so output window is full screen
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
-    print("screen size: ", screen_width,screen_height)
-    bg_canvas = np.zeros((screen_height,screen_width,3), np.uint8)
 
     #resize cam image
-    cam_ratio = just_cam.shape[0]/just_cam.shape[1]
-    cam_width = bg_canvas.shape[1]/2
-    cam_height = cam_width*cam_ratio
-    cam_dim = (int(cam_width),int(cam_height))
-    just_cam = cv2.resize(just_cam,cam_dim,interpolation = cv2.INTER_AREA)
+    cam_width = int(screen_width/2)
+    cam_height = int(screen_height/2)
+    just_cam = cv2.resize(just_cam,(cam_width,cam_height),interpolation = cv2.INTER_AREA)
     just_cam_flipped = cv2.flip(just_cam,1)
     just_cam_flipped = cv2.cvtColor(just_cam_flipped, cv2.COLOR_BGR2HSV)
+    #create canvas to draw landmarks on
+    blank_bottom = np.zeros((cam_height,cam_width,3), np.uint8)
+    justLandmarks = blank_bottom
+    if body:
+        justLandmarks = draw_lines_blank_canvas(body,blank_bottom)
+    justLandmarksFlipped = cv2.flip(justLandmarks,1)
+    #join all of the images
+    justLandmarksJoined = cv2.hconcat([justLandmarks,justLandmarksFlipped])
     just_cam_joined = cv2.hconcat([just_cam,just_cam_flipped])
-    blank_bottom = np.zeros((just_cam_joined.shape[0],just_cam_joined.shape[1],3), np.uint8)
-    full_layout = cv2.vconcat([just_cam_joined,blank_bottom])
+    full_layout = cv2.vconcat([just_cam_joined,justLandmarksJoined])
 
-    bg_canvas[0:just_cam_joined.shape[0],0:just_cam_joined.shape[1]] = just_cam_joined #paste cam output on bg_canvas
-
-    if frame0 is None: break
-    
-    NoneType = type(None)
-    bg_canvas = np.zeros((int(cam_height),int(cam_height),3), np.uint8)
-    if type(landmarks) != NoneType:
-        #draw landmarks on area below cam image
-        canvas_max_width = cam_width
-        canvas_max_height = canvas_max_width * cam_ratio
-        positions = []
-        for landmark in landmarks:
-            x,y,z = landmark
-            x_loc = int(x*canvas_max_width)
-            y_loc = int(y*canvas_max_height+cam_height)
-            positions.append([x_loc,y_loc])
-            cv2.circle(full_layout,(x_loc,y_loc), 5, (200,100,255), -1)
-
-        # for line in LINES_BODY:
-        #     bg_canvas = cv2.line(bg_canvas,positions[line[0]],positions[line[1]],(0, 255, 0),8)
-    out.write(full_layout)
+    if record:
+        out.write(full_layout)
     cv2.imshow("Yoga demo",full_layout)
     # Wait for 'q' key to stop the program 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         # After we release our webcam, we also release the output
-        out.release() 
+        if record:
+            out.release() 
         break
 
 cv2.destroyAllWindows()
