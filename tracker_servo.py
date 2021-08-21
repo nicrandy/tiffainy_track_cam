@@ -15,8 +15,8 @@ time.sleep(1)
 
 #set the correct pins for servos
 pinYaw = 5
-pinPitch = 9
-speed = .08 # increase to go slower, decrease to go faster
+pinPitch = 11
+speed = .01 # increase to go slower, decrease to go faster
 
 #set the home angle for servos
 yawHomeAngle = 90
@@ -38,11 +38,11 @@ pitchMin = 60
 #this part sets the servos to the home position
 board.digital[pinYaw].mode = SERVO
 board.digital[pinYaw].write(yawHomeAngle)
-time.sleep(.5)
+time.sleep(1)
 board.digital[pinPitch].mode = SERVO
 board.digital[pinPitch].write(pitchHomeAngle)
 print("Tracker running")
-time.sleep(2)
+time.sleep(1)
 
 def wakeup_dance():
 	i = 10
@@ -132,7 +132,7 @@ def scan():
 	if yawAngle > yawMax - 5:
 		currentRotation = 'right'
 
-wakeup_dance()
+# wakeup_dance()
 
 while testing:
 	if keyboard.is_pressed("q"):

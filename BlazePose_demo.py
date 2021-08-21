@@ -86,6 +86,64 @@ def draw_lines_blank_canvas(body,blank_image):
     blank_image = cv2.resize(blank_image,(int(blank_image.shape[1]/2),int(blank_image.shape[0]/2)),interpolation = cv2.INTER_AREA)
     return blank_image
 
+def draw_normalized_landmarks(landmarks,blank_image):
+    LINES_BODY = [[9,10],[4,6],[1,3],
+        [12,14],[14,16],[16,20],[20,18],[18,16],
+        [12,11],[11,23],[23,24],[24,12],
+        [11,13],[13,15],[15,19],[19,17],[17,15],
+        [24,26],[26,28],[32,30],
+        [23,25],[25,27],[29,31]]
+    for pairs in LINES_BODY:
+        print("Lines body pairs ",pairs)
+    xMin = 1000000
+    xMax = -100000
+    yMin = 1000000
+    yMax = -100000
+    for landmark in landmarks:
+        x = landmark[0]
+        y = landmark[1]
+        if x > xMax:
+            xMax = x 
+        if x < xMin:
+            xMin = x 
+        if y > yMax:
+            yMax = y
+        if y < yMin:
+            yMin = y
+    print("Normalized x and y: ", xMin, xMax,yMin,yMax)
+    xNorm = xMax - xMin
+    yNorm = yMax - yMin
+    #calculate ratios
+    xRatio = (xMax-xMin) / blank_image.shape[1]
+    yRatio = (yMax-yMin) / blank_image.shape[0]
+    landmarksToSave = []
+    for landmark in landmarks:
+        x = landmark[0]
+        y = landmark[1]
+        # if xRatio >= yRatio:
+        xNormed = int(((x - xMin) / xNorm) * blank_image.shape[1])
+        yNormed = int((blank_image.shape[0]/2) + (y - (((yMax-yMin)/2) + yMin)))
+        landmarksToSave.append([xNormed,yNormed])
+        # if yRatio > xRatio:
+        #     xNormed = x
+        #     yNormed = int(((y + 1 - yMin) / yNorm) * blank_image.shape[0])
+        #     landmarksToSave.append([xNormed,yNormed])
+        cv2.circle(blank_image, (xNormed,yNormed), 4, (148,25,206), -1)
+    print("landmarksToSave: ", landmarksToSave)
+    for lines in LINES_BODY:
+        print("This line pair: ",lines)
+        startPointX = landmarksToSave[lines[0]][0]
+        endPointX = landmarksToSave[lines[1]][0]
+        startPointY = landmarksToSave[lines[0]][1]
+        endPointY = landmarksToSave[lines[1]][1]
+        startPoint = (startPointX,startPointY)
+        endPoint = (endPointX,endPointY)
+        print("Start and end points of line: ",startPoint,endPoint)
+        cv2.line(blank_image,startPoint, endPoint,(0, 255, 0),5)
+    # blank_image = cv2.resize(blank_image,(int(blank_image.shape[1]/2),int(blank_image.shape[0]/2)),interpolation = cv2.INTER_AREA)
+    cv2.imshow("normed landmarks", blank_image)
+    return blank_image
+
 if record:
     dateTimeObj = datetime.now()
     timestampStr = dateTimeObj.strftime("%b_%d_%Y_%H_%M_%S")
@@ -115,11 +173,15 @@ while True:
     #create canvas to draw landmarks on
     blank_bottom = np.zeros((cam_height,cam_width,3), np.uint8)
     justLandmarks = blank_bottom
+    normalizedLandmarks = blank_bottom
     if body:
         justLandmarks = draw_lines_blank_canvas(body,blank_bottom)
+        normalizedLandmarks = draw_normalized_landmarks(body.landmarks,blank_bottom)
     justLandmarksFlipped = cv2.flip(justLandmarks,1)
+    normedLandmarksFlipped = cv2.flip(normalizedLandmarks,1)
+    print("normed lm flipped shape: ", normedLandmarksFlipped.shape[1], normedLandmarksFlipped.shape[0])
     #join all of the images
-    justLandmarksJoined = cv2.hconcat([justLandmarks,justLandmarksFlipped])
+    justLandmarksJoined = cv2.hconcat([justLandmarks,normalizedLandmarks])
     just_cam_joined = cv2.hconcat([just_cam,just_cam_flipped])
     full_layout = cv2.vconcat([just_cam_joined,justLandmarksJoined])
 

@@ -1,6 +1,10 @@
 import cv2
 import numpy as np
-import tracker_servo as  tracker
+
+#set the below variable to True if using the tracking accessory
+useTrackingCam = True 
+if useTrackingCam:
+    import tracker_servo as  tracker
 
 # LINES_BODY is used when drawing the skeleton onto the source image. 
 # Each variable is a list of continuous lines.
@@ -86,46 +90,47 @@ class BlazeposeRenderer:
                 cv2.circle(self.frame, (x_y[0], x_y[1]), 4, color, -11)
 
 ############our code for tracker cam#####################
-            xMiddle = ((xMax-xMin)/2)+xMin
-            yMiddle = ((yMax-yMin)/2)+yMin
-            frameXmiddle = int(self.frame.shape[1]/2)
-            frameYmiddle = int(self.frame.shape[0]/2)
-            #draw a circle in the middle of the frame
-            cv2.circle(self.frame, (int(frameXmiddle),int(frameYmiddle)), 35, (220,80,149), -1)
-            #draw a circle in the middle of our target we want to track
-            cv2.circle(self.frame, (int(xMiddle),int(yMiddle)), 20, (100,150,200), -1)
+            if useTrackingCam:
+                xMiddle = ((xMax-xMin)/2)+xMin
+                yMiddle = ((yMax-yMin)/2)+yMin
+                frameXmiddle = int(self.frame.shape[1]/2)
+                frameYmiddle = int(self.frame.shape[0]/2)
+                #draw a circle in the middle of the frame
+                cv2.circle(self.frame, (int(frameXmiddle),int(frameYmiddle)), 35, (220,80,149), -1)
+                #draw a circle in the middle of our target we want to track
+                cv2.circle(self.frame, (int(xMiddle),int(yMiddle)), 20, (100,150,200), -1)
 
-            #set the threshold on the movement bounding box
-            #adjust the values (based on with of input frame)
-            left_wall = .45 * self.frame.shape[1]
-            right_wall = .55 *self.frame.shape[1]
-            ceiling = .5 * self.frame.shape[0] #values measured from TOP of image
-            ground = .6 * self.frame.shape[0] 
+                #set the threshold on the movement bounding box
+                #adjust the values (based on with of input frame)
+                left_wall = .45 * self.frame.shape[1]
+                right_wall = .55 *self.frame.shape[1]
+                ceiling = .7 * self.frame.shape[0] #values measured from TOP of image
+                ground = .8 * self.frame.shape[0] 
 
-            #get distance from tracking object to center of frame. Adjust movement angle of servo the further the object is from center of frame
-            targetDistance = abs(xMiddle - (self.frame.shape[1]/2))
-            yawMovementSpeed = 0
-            if targetDistance > self.frame.shape[1] * .05:
-                yawMovementSpeed = 1
-            if targetDistance > self.frame.shape[1] * .2:
-                yawMovementSpeed = 2
-            if targetDistance > self.frame.shape[1] * .4:
-                yawMovementSpeed = 3
-            tracker.set_yaw_speed(yawMovementSpeed)
+                #get distance from tracking object to center of frame. Adjust movement angle of servo the further the object is from center of frame
+                targetDistance = abs(xMiddle - (self.frame.shape[1]/2))
+                yawMovementSpeed = 0
+                if targetDistance > self.frame.shape[1] * .05:
+                    yawMovementSpeed = 1
+                if targetDistance > self.frame.shape[1] * .2:
+                    yawMovementSpeed = 2
+                if targetDistance > self.frame.shape[1] * .4:
+                    yawMovementSpeed = 3
+                tracker.set_yaw_speed(yawMovementSpeed)
 
-            currentlyMoving = 'X'
-            if xMiddle < left_wall:
-                tracker.left()
-                currentlyMoving = '<--'
-            if xMiddle > right_wall:
-                tracker.right()
-                currentlyMoving = '-->'
-            if yMiddle > ceiling:
-                tracker.down()
-            if yMiddle < ground:
-                tracker.up()
-            cv2.putText(self.frame, 'Track speed: ' + str(yawMovementSpeed) + ' direction: ' + currentlyMoving,(20,50), 
-                cv2.FONT_HERSHEY_SIMPLEX, 2,(50,100,255),2,cv2.LINE_AA)
+                currentlyMoving = 'X'
+                if xMiddle < left_wall:
+                    tracker.left()
+                    currentlyMoving = '<--'
+                if xMiddle > right_wall:
+                    tracker.right()
+                    currentlyMoving = '-->'
+                if yMiddle > ceiling:
+                    tracker.down()
+                if yMiddle < ground:
+                    tracker.up()
+                cv2.putText(self.frame, 'Track speed: ' + str(yawMovementSpeed) + ' direction: ' + currentlyMoving,(20,50), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 2,(50,100,255),2,cv2.LINE_AA)
 
 
 
@@ -137,7 +142,8 @@ class BlazeposeRenderer:
         else:
 ############ our tracker cam code
             # tracker cam will scan if no target object detected
-            tracker.scan() 
+            if useTrackingCam:
+                tracker.scan() 
         if self.frame is None:
             self.frame = frame
             self.body = None
