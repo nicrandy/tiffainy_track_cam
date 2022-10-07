@@ -1,6 +1,8 @@
 # tiffainy_track_cam
 Tracking camera system for the OAK camera
 
+Full instructions in the documentation.pdf
+
 All 3D printable parts available on Thingiverse: https://www.thingiverse.com/thing:4924306
 
 Follow the documentation.pdf document for instructions on assembly and setting up Tiff(AI)ny
